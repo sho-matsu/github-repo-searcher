@@ -1,0 +1,35 @@
+# --- macOS ---
+.DS_Store
+
+# --- Gradle / JVM ---
+.gradle/
+build/
+**/build/
+local.properties
+*.log
+
+# --- Kotlin ---
+.kotlin/
+
+# --- Android ---
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+
+# --- IDE ---
+**/.idea/*
+!**/.idea/dictionaries
+**/.idea/dictionaries/*
+!**/.idea/dictionaries/dictionary.xml
+*.iml
+.vscode/
+
+# --- Claude Code (個人設定) ---
+.claude/settings.local.json
+
+# --- Release signing ---
+keystore.properties
+*.jks
+*.keystore
