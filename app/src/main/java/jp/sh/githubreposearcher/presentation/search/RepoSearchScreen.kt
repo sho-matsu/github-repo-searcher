@@ -2,17 +2,26 @@ package jp.sh.githubreposearcher.presentation.search
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -20,7 +29,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -52,10 +63,14 @@ fun RepoSearchScreen(
         topBar = { TopAppBar(title = { Text(stringResource(R.string.repo_search_title)) }) },
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            Text(
-                text = stringResource(R.string.repo_search_query_label, state.query),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            SearchBar(
+                queryInput = state.queryInput,
+                canSearch = state.canSearch,
+                canClear = state.canClear,
+                onQueryChange = { onEvent(RepoSearchEvent.QueryChanged(it)) },
+                onSearch = { onEvent(RepoSearchEvent.Search) },
+                onClear = { onEvent(RepoSearchEvent.ClearQuery) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
             HorizontalDivider()
             RepoSearchContentView(
@@ -68,12 +83,58 @@ fun RepoSearchScreen(
 }
 
 @Composable
+private fun SearchBar(
+    queryInput: String,
+    canSearch: Boolean,
+    canClear: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val submit = {
+        if (canSearch) {
+            keyboardController?.hide()
+            onSearch()
+        }
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier,
+    ) {
+        OutlinedTextField(
+            value = queryInput,
+            onValueChange = onQueryChange,
+            placeholder = { Text(stringResource(R.string.repo_search_query_placeholder)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            trailingIcon = {
+                if (canClear) {
+                    IconButton(onClick = onClear) {
+                        Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.repo_search_clear))
+                    }
+                }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { submit() }),
+            modifier = Modifier.weight(1f),
+        )
+        Button(onClick = submit, enabled = canSearch) {
+            Text(stringResource(R.string.repo_search_submit))
+        }
+    }
+}
+
+@Composable
 private fun RepoSearchContentView(
     content: RepoSearchContent,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (content) {
+        RepoSearchContent.Idle -> CenteredBox(modifier) { Text(stringResource(R.string.repo_search_idle)) }
         RepoSearchContent.Loading -> CenteredBox(modifier) { CircularProgressIndicator() }
         RepoSearchContent.Empty -> CenteredBox(modifier) { Text(stringResource(R.string.repo_search_empty)) }
         is RepoSearchContent.Loaded -> RepoList(repos = content.repos, modifier = modifier)
@@ -125,6 +186,7 @@ private class RepoSearchContentPreviewProvider : PreviewParameterProvider<RepoSe
                 RepoItemUiModel(3, "compose-samples"),
             ),
         ),
+        RepoSearchContent.Idle,
         RepoSearchContent.Loading,
         RepoSearchContent.Empty,
         RepoSearchContent.Error(R.string.repo_search_error_network, isRetryable = true),
@@ -137,6 +199,6 @@ private fun RepoSearchScreenPreview(
     @PreviewParameter(RepoSearchContentPreviewProvider::class) content: RepoSearchContent,
 ) {
     GitHubRepoSearcherTheme {
-        RepoSearchScreen(state = RepoSearchUiState(query = "Android", content = content), onEvent = {})
+        RepoSearchScreen(state = RepoSearchUiState(queryInput = "Android", content = content), onEvent = {})
     }
 }

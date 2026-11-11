@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment
 import dagger.hilt.android.AndroidEntryPoint
 import jp.sh.githubreposearcher.presentation.theme.GitHubRepoSearcherTheme
 
-/** 引数で受け取ったクエリ文字列で GitHub のリポジトリを検索し、結果を表示する Fragment。 */
+/** GitHub のリポジトリを検索し、結果を表示する Fragment。引数のクエリは初期表示時の検索に使う。 */
 @AndroidEntryPoint
 class RepoSearchFragment : Fragment() {
 
