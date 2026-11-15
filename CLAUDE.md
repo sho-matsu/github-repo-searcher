@@ -40,7 +40,7 @@ GitHub Search API(`GET /search/repositories`)でリポジトリを検索して�
 # 単一のテストクラス / メソッドを実行
 ./gradlew :app:testDebugUnitTest --tests "jp.sh.githubreposearcher.reposearch.domain.SearchQueryTest"
 ./gradlew :app:testDebugUnitTest --tests "jp.sh.githubreposearcher.reposearch.presentation.RepoSearchViewModelTest"
-./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=jp.sh.githubreposearcher.ExampleInstrumentedTest
+./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=jp.sh.githubreposearcher.reposearch.presentation.RepoSearchScreenTest
 ```
 
 ### コード品質
@@ -87,12 +87,14 @@ GitHub Search API(`GET /search/repositories`)でリポジトリを検索して�
   infrastructure/      # アダプター: GitHub API クライアント、DTO、マッパー、DB、ポートの実装。
   presentation/        # Compose の画面、ViewModel、UiState、ナビゲーション。
   di/                  # その機能のコンポジションルート: インターフェースと実装を結び付ける Hilt module。
-core/                  # 複数の機能で共有するもの(例: core/network、core/di、core/ui/theme)。
+core/                  # アプリ全体の基盤と、複数の機能で共有するもの(例: core/network、core/di、core/ui/theme)。
 ```
 
 - 機能パッケージの名前はユビキタス言語に沿った機能名にする(`reposearch` など)。`common`/`util` のような曖昧な名前のパッケージは作らない。
 - 機能同士は互いの内部(`infrastructure`、`presentation` の実装、DTO など)に依存しない。他の機能が必要とするものは、その機能の `domain` のポートやモデルとして公開する。機能の内部実装は `internal`/`private` で隠す。
-- `core/` に置くのは、実際に 2 つ以上の機能で共有されているもの(HTTP クライアントの設定、Dispatcher、テーマなど)だけ。「いつか共有するかもしれない」コードは機能パッケージに置いておき、共有が必要になった時点で `core/` に移す。
+- `core/` に置くのは次の 2 種類だけ。
+  - 特定の機能に属さないアプリ全体の基盤(HTTP クライアントの設定、Dispatcher、テーマなど)。使う機能がまだ 1 つでも、最初から `core/` に置く。
+  - 実際に 2 つ以上の機能で共有されているコード。機能固有のモデルやロジックで「いつか共有するかもしれない」ものは機能パッケージに置いておき、共有が必要になった時点で `core/` に移す。
 - 次に述べるレイヤー間の依存関係のルールは、機能パッケージの中でも `core/` の中でも同じように守る。
 
 - **依存関係のルール**: 依存は内側への一方向のみ — `presentation → application → domain ← infrastructure`。`domain` と `application` では `android.*`、`androidx.*`、Compose、Retrofit/Ktor、シリアライゼーション、DB のアノテーションを import しない。

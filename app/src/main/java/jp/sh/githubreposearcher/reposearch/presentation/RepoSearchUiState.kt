@@ -1,13 +1,14 @@
 package jp.sh.githubreposearcher.reposearch.presentation
 
 import androidx.annotation.StringRes
+import jp.sh.githubreposearcher.reposearch.domain.SearchQuery
 
 data class RepoSearchUiState(
     /** 検索窓に入力中の文字列。検索が実行されるまでは結果に影響しない。 */
     val queryInput: String = "",
     val content: RepoSearchContent = RepoSearchContent.Idle,
 ) {
-    val canSearch: Boolean get() = queryInput.isNotBlank()
+    val canSearch: Boolean get() = SearchQuery.ofOrNull(queryInput) != null
     val canClear: Boolean get() = queryInput.isNotEmpty()
 }
 
