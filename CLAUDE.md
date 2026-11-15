@@ -76,15 +76,24 @@ GitHub Search API(`GET /search/repositories`)でリポジトリを検索して�
 
 ### アーキテクチャ(Clean Architecture)
 
-`jp.sh.githubreposearcher` 配下のパッケージ構成(当面は単一モジュール。規模が大きくなったら同じ境界で Gradle モジュールに分割する):
+パッケージは **package by feature** で切る。トップレベルは機能(feature)ごとのパッケージとし、レイヤーは各機能パッケージの中のサブパッケージとして表す。1 つの機能に関するコードを 1 か所にまとめ、機能の追加・削除・変更の影響範囲をそのパッケージ内に閉じ込めるためである。
+
+`jp.sh.githubreposearcher` 配下のパッケージ構成(当面は単一モジュール。規模が大きくなったら機能の境界で Gradle モジュールに分割する):
 
 ```
-domain/          # エンティティ、値オブジェクト、ドメインサービス、ポート(インターフェース)、ドメインエラー。純粋な Kotlin。
-application/     # ユースケース(アプリケーションサービス)。ドメインとポートを組み合わせて処理する。純粋な Kotlin。
-infrastructure/  # アダプター: GitHub API クライアント、DTO、マッパー、DB、ポートの実装。
-presentation/    # Compose の画面、ViewModel、UiState、ナビゲーション(ui/theme もここに置く)。
-di/              # コンポジションルート: インターフェースと実装を結び付ける Hilt module。
+<feature>/             # 機能ごとのパッケージ(例: reposearch/)
+  domain/              # エンティティ、値オブジェクト、ドメインサービス、ポート(インターフェース)、ドメインエラー。純粋な Kotlin。
+  application/         # ユースケース(アプリケーションサービス)。ドメインとポートを組み合わせて処理する。純粋な Kotlin。
+  infrastructure/      # アダプター: GitHub API クライアント、DTO、マッパー、DB、ポートの実装。
+  presentation/        # Compose の画面、ViewModel、UiState、ナビゲーション。
+  di/                  # その機能のコンポジションルート: インターフェースと実装を結び付ける Hilt module。
+core/                  # 複数の機能で共有するもの(例: core/network、core/di、core/ui/theme)。
 ```
+
+- 機能パッケージの名前はユビキタス言語に沿った機能名にする(`reposearch` など)。`common`/`util` のような曖昧な名前のパッケージは作らない。
+- 機能同士は互いの内部(`infrastructure`、`presentation` の実装、DTO など)に依存しない。他の機能が必要とするものは、その機能の `domain` のポートやモデルとして公開する。機能の内部実装は `internal`/`private` で隠す。
+- `core/` に置くのは、実際に 2 つ以上の機能で共有されているもの(HTTP クライアントの設定、Dispatcher、テーマなど)だけ。「いつか共有するかもしれない」コードは機能パッケージに置いておき、共有が必要になった時点で `core/` に移す。
+- 次に述べるレイヤー間の依存関係のルールは、機能パッケージの中でも `core/` の中でも同じように守る。
 
 - **依存関係のルール**: 依存は内側への一方向のみ — `presentation → application → domain ← infrastructure`。`domain` と `application` では `android.*`、`androidx.*`、Compose、Retrofit/Ktor、シリアライゼーション、DB のアノテーションを import しない。
 - **ポートとアダプター**: domain/application が必要とするインターフェース(検索 Gateway、Repository など)は `domain` に宣言し(Separated Interface)、`infrastructure` で実装する。
@@ -139,7 +148,7 @@ di/              # コンポジションルート: インターフェースと�
 - DI フレームワークは Hilt を使う(KSP で処理する。kapt は使わない)。
 - エントリポイント: `Application` クラスに `@HiltAndroidApp`、`MainActivity` に `@AndroidEntryPoint`、ViewModel に `@HiltViewModel` + `@Inject constructor` を付ける。ViewModel は `XxxRoute` コンポーザブルの中で `hiltViewModel()` を使って取得し、状態を持たない `XxxScreen` には ViewModel を渡さない。
 - `domain` / `application` で使ってよいのは、コンストラクタに付ける JSR-330 の `@Inject`(`javax.inject`)だけ。Hilt/Dagger 独自のアノテーション(`@Module`、`@InstallIn`、`@HiltViewModel`、`@AndroidEntryPoint` など)は、`di/`、`presentation/`、`Application`/`Activity` クラスでのみ使う。
-- module は `di/` に置き、関心ごとに分ける(`NetworkModule`、`GatewayModule`、`DispatcherModule` など)。インターフェースと実装は `abstract` な module で `@Binds` を使って結び付ける。`@Provides` は自分でアノテーションを付けられない型(Retrofit/OkHttp/Ktor、`Json`、Room DB、Dispatcher)に限る。
+- module は、その機能専用のものは `<feature>/di/`、複数の機能で共有するものは `core/di/` などの `core/` 配下に置き、関心ごとに分ける(`NetworkModule`、`GatewayModule`、`DispatcherModule` など)。インターフェースと実装は `abstract` な module で `@Binds` を使って結び付ける。`@Provides` は自分でアノテーションを付けられない型(Retrofit/OkHttp/Ktor、`Json`、Room DB、Dispatcher)に限る。
 - 適切な範囲で最も狭いコンポーネントに install する(`SingletonComponent`、`ViewModelComponent` など)。基本はスコープなしとし、`@Singleton` は共有が必要なものや生成コストが高いもの(HTTP クライアント、DB、メモリキャッシュ)にだけ付ける。
 - 同じ型を区別するときは修飾子を使う: `CoroutineDispatcher` には `@IoDispatcher` / `@DefaultDispatcher`、異なるベース URL には独自の `@Qualifier` アノテーションなど。
 - フィールドインジェクション(`@Inject lateinit var`)は Android のエントリポイント以外で使わない。ビジネスロジックから `EntryPointAccessors` を呼ばない。
