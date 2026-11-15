@@ -8,6 +8,7 @@ import jp.sh.githubreposearcher.reposearch.domain.RepoSearchResult
 import jp.sh.githubreposearcher.reposearch.domain.SearchError
 import jp.sh.githubreposearcher.reposearch.domain.SearchQuery
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.SerializationException
 import okhttp3.Headers.Companion.headersOf
@@ -23,12 +24,8 @@ class RetrofitGitHubRepoRepositoryTest {
 
     private val query = checkNotNull(SearchQuery.ofOrNull("Android"))
 
-    private fun search(api: GitHubApi): RepoSearchResult {
-        val dispatcher = StandardTestDispatcher()
-        var result: RepoSearchResult? = null
-        runTest(dispatcher) { result = RetrofitGitHubRepoRepository(api, dispatcher).search(query) }
-        return checkNotNull(result)
-    }
+    private fun TestScope.repository(api: GitHubApi) =
+        RetrofitGitHubRepoRepository(api, StandardTestDispatcher(testScheduler))
 
     private fun throwingApi(throwable: Throwable) = GitHubApi { throw throwable }
 
@@ -44,14 +41,14 @@ class RetrofitGitHubRepoRepositoryTest {
     }
 
     @Test
-    fun `クエリをそのまま API に渡し、結果をドメインモデルに変換して返す`() {
+    fun `クエリをそのまま API に渡し、結果をドメインモデルに変換して返す`() = runTest {
         var requestedQuery: String? = null
         val api = GitHubApi { q ->
             requestedQuery = q
             SearchRepositoriesResponseDto(listOf(RepoDto(id = 1, name = "nowinandroid", htmlUrl = "https://github.com/android/nowinandroid")))
         }
 
-        val result = search(api)
+        val result = repository(api).search(query)
 
         assertEquals("Android", requestedQuery)
         val repos = (result as RepoSearchResult.Success).repos
@@ -62,40 +59,40 @@ class RetrofitGitHubRepoRepositoryTest {
     }
 
     @Test
-    fun `通信エラーのとき Network を返す`() {
-        assertEquals(RepoSearchResult.Failure(SearchError.Network), search(throwingApi(IOException())))
+    fun `通信エラーのとき Network を返す`() = runTest {
+        assertEquals(RepoSearchResult.Failure(SearchError.Network), repository(throwingApi(IOException())).search(query))
     }
 
     @Test
-    fun `API が rate-limit ヘッダー付きの 403 を返したとき RateLimited を返す`() {
+    fun `API が rate-limit ヘッダー付きの 403 を返したとき RateLimited を返す`() = runTest {
         val error = httpError(403, "x-ratelimit-remaining", "0")
-        assertEquals(RepoSearchResult.Failure(SearchError.RateLimited), search(throwingApi(error)))
+        assertEquals(RepoSearchResult.Failure(SearchError.RateLimited), repository(throwingApi(error)).search(query))
     }
 
     @Test
-    fun `API が 429 を返したとき RateLimited を返す`() {
-        assertEquals(RepoSearchResult.Failure(SearchError.RateLimited), search(throwingApi(httpError(429))))
+    fun `API が 429 を返したとき RateLimited を返す`() = runTest {
+        assertEquals(RepoSearchResult.Failure(SearchError.RateLimited), repository(throwingApi(httpError(429))).search(query))
     }
 
     @Test
-    fun `rate-limit に達していない 403 のとき Unexpected を返す`() {
+    fun `rate-limit に達していない 403 のとき Unexpected を返す`() = runTest {
         val error = httpError(403, "x-ratelimit-remaining", "10")
-        assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), search(throwingApi(error)))
+        assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), repository(throwingApi(error)).search(query))
     }
 
     @Test
-    fun `API が 422 を返したとき InvalidQuery を返す`() {
-        assertEquals(RepoSearchResult.Failure(SearchError.InvalidQuery), search(throwingApi(httpError(422))))
+    fun `API が 422 を返したとき InvalidQuery を返す`() = runTest {
+        assertEquals(RepoSearchResult.Failure(SearchError.InvalidQuery), repository(throwingApi(httpError(422))).search(query))
     }
 
     @Test
-    fun `API が 500 を返したとき Unexpected を返す`() {
-        assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), search(throwingApi(httpError(500))))
+    fun `API が 500 を返したとき Unexpected を返す`() = runTest {
+        assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), repository(throwingApi(httpError(500))).search(query))
     }
 
     @Test
-    fun `レスポンスを解析できないとき Unexpected を返す`() {
-        val result = search(throwingApi(SerializationException("broken")))
+    fun `レスポンスを解析できないとき Unexpected を返す`() = runTest {
+        val result = repository(throwingApi(SerializationException("broken"))).search(query)
         assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), result)
     }
 }
