@@ -70,6 +70,12 @@ class RetrofitGitHubRepoRepositoryTest {
     }
 
     @Test
+    fun `API がセカンダリレート制限の retry-after 付きの 403 を返したとき RateLimited を返す`() = runTest {
+        val error = httpError(403, "x-ratelimit-remaining", "10", "retry-after", "60")
+        assertEquals(RepoSearchResult.Failure(SearchError.RateLimited), repository(throwingApi(error)).search(query))
+    }
+
+    @Test
     fun `API が 429 を返したとき RateLimited を返す`() = runTest {
         assertEquals(RepoSearchResult.Failure(SearchError.RateLimited), repository(throwingApi(httpError(429))).search(query))
     }

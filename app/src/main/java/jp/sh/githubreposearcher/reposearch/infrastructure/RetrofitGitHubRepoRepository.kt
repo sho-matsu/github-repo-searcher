@@ -42,13 +42,19 @@ internal class RetrofitGitHubRepoRepository @Inject constructor(
 
     private fun HttpException.toSearchError(): SearchError = when {
         code() == HTTP_TOO_MANY_REQUESTS -> SearchError.RateLimited
-        code() == HTTP_FORBIDDEN && isRateLimitExhausted() -> SearchError.RateLimited
+        code() == HTTP_FORBIDDEN && isRateLimited() -> SearchError.RateLimited
         code() == HTTP_UNPROCESSABLE_ENTITY -> SearchError.InvalidQuery
         else -> SearchError.Unexpected
     }
 
-    private fun HttpException.isRateLimitExhausted(): Boolean =
-        response()?.headers()?.get(HEADER_RATE_LIMIT_REMAINING) == RATE_LIMIT_EXHAUSTED
+    /**
+     * GitHub は 403 をレート制限以外(権限不足など)にも使うので、ヘッダーで判別する。プライマリレート制限では
+     * x-ratelimit-remaining が 0 になり、セカンダリレート制限では retry-after が付くことがある。
+     */
+    private fun HttpException.isRateLimited(): Boolean {
+        val headers = response()?.headers() ?: return false
+        return headers[HEADER_RATE_LIMIT_REMAINING] == RATE_LIMIT_EXHAUSTED || headers[HEADER_RETRY_AFTER] != null
+    }
 
     private companion object {
         const val HTTP_FORBIDDEN = 403
@@ -56,5 +62,6 @@ internal class RetrofitGitHubRepoRepository @Inject constructor(
         const val HTTP_TOO_MANY_REQUESTS = 429
         const val HEADER_RATE_LIMIT_REMAINING = "x-ratelimit-remaining"
         const val RATE_LIMIT_EXHAUSTED = "0"
+        const val HEADER_RETRY_AFTER = "retry-after"
     }
 }
