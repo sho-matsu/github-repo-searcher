@@ -20,11 +20,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # AGP 9 / Gradle 9 は JDK 17 以上が必要。ソース/ターゲットは build.gradle.kts で Java 11 に固定している。
+      # Gradle デーモンが使う JDK は gradle/gradle-daemon-jvm.properties の toolchainVersion で決まる。
+      # ここで同じバージョンを入れておかないと、Gradle が実行のたびに別途 JDK を探したりダウンロードしたりする。
+      # ソース/ターゲットは build.gradle.kts で Java 11 に固定している。
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       # Gradle のキャッシュと wrapper の検証を行う。
       - uses: gradle/actions/setup-gradle@v6
@@ -32,9 +34,14 @@ jobs:
       - name: Run unit tests
         run: ./gradlew test
 
-      - name: Upload test reports
+      - name: Run Android lint
+        run: ./gradlew lint
+
+      - name: Upload test and lint reports
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: unit-test-reports
-          path: app/build/reports/tests/
+          path: |
+            app/build/reports/tests/
+            app/build/reports/lint-results-*.html
