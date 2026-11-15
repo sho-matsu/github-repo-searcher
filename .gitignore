@@ -29,6 +29,9 @@ captures/
 # --- Claude Code (個人設定) ---
 .claude/settings.local.json
 
+# --- AI エージェントの作業ファイル ---
+.agent/
+
 # --- Release signing ---
 keystore.properties
 *.jks
