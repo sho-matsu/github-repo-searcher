@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardActions
@@ -71,7 +73,15 @@ fun RepoSearchScreen(
         modifier = modifier.fillMaxSize(),
         topBar = { TopAppBar(title = { Text(stringResource(R.string.repo_search_title)) }) },
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+        // edge-to-edge ではキーボード表示時に adjustResize でウィンドウが縮まないため、IME の insets を自分で反映する。
+        // Scaffold が付けたシステムバー分の padding を consume してから imePadding を付け、下端の余白が二重にならないようにする。
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding(),
+        ) {
             SearchBar(
                 queryInput = state.queryInput,
                 canSearch = state.canSearch,
