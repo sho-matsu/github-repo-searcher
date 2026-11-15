@@ -50,7 +50,7 @@ class RepoSearchViewModelTest {
     }
 
     private fun viewModel(query: String?, repository: GitHubRepoRepository) = RepoSearchViewModel(
-        savedStateHandle = SavedStateHandle(mapOf(RepoSearchFragment.ARG_QUERY to query)),
+        savedStateHandle = SavedStateHandle(mapOf(RepoSearchViewModel.ARG_QUERY to query)),
         searchGitHubRepos = SearchGitHubReposUseCase(repository),
     )
 

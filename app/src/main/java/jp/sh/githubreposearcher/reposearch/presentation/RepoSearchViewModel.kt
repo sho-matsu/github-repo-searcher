@@ -37,15 +37,15 @@ class RepoSearchViewModel @Inject constructor(
      * Fragment 引数と同じキーに書き戻すことで、初期クエリと「確定済みクエリ」を一つの値として扱う。
      */
     private var submittedQuery: SearchQuery?
-        get() = savedStateHandle.get<String>(RepoSearchFragment.ARG_QUERY)?.let(SearchQuery::ofOrNull)
+        get() = savedStateHandle.get<String>(ARG_QUERY)?.let(SearchQuery::ofOrNull)
         set(value) {
-            savedStateHandle[RepoSearchFragment.ARG_QUERY] = value?.value
+            savedStateHandle[ARG_QUERY] = value?.value
         }
 
     private val _uiState = MutableStateFlow(
         RepoSearchUiState(
             queryInput = savedStateHandle[KEY_QUERY_INPUT]
-                ?: savedStateHandle[RepoSearchFragment.ARG_QUERY]
+                ?: savedStateHandle[ARG_QUERY]
                 ?: "",
         ),
     )
@@ -109,8 +109,10 @@ class RepoSearchViewModel @Inject constructor(
         data object Clear : SearchRequest
     }
 
-    private companion object {
-        const val KEY_QUERY_INPUT = "query_input"
+    internal companion object {
+        /** 初期クエリを受け取る引数キー。呼び出し元(Fragment)はこのキーで引数を渡す。 */
+        const val ARG_QUERY = "query"
+        private const val KEY_QUERY_INPUT = "query_input"
     }
 }
 
