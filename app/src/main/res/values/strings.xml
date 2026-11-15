@@ -11,4 +11,5 @@
     <string name="repo_search_error_rate_limited">API の利用制限に達しました。しばらくしてから再試行してください。</string>
     <string name="repo_search_error_invalid_query">検索クエリが不正です。</string>
     <string name="repo_search_error_unexpected">予期しないエラーが発生しました。</string>
+    <string name="repo_open_page_failed">ページを開けるアプリが見つかりません。</string>
 </resources>

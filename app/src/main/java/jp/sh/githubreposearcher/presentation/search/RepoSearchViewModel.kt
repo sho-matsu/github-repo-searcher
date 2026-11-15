@@ -121,7 +121,7 @@ private fun RepoSearchResult.toContent(): RepoSearchContent = when (this) {
     is RepoSearchResult.Failure -> error.toContent()
 }
 
-private fun GitHubRepo.toUiModel() = RepoItemUiModel(id = id.value, name = name.value)
+private fun GitHubRepo.toUiModel() = RepoItemUiModel(id = id.value, name = name.value, pageUrl = pageUrl.value)
 
 private fun SearchError.toContent(): RepoSearchContent.Error = when (this) {
     SearchError.Network -> RepoSearchContent.Error(R.string.repo_search_error_network, isRetryable = true)

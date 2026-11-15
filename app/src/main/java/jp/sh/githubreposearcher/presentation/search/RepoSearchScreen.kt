@@ -1,5 +1,6 @@
 package jp.sh.githubreposearcher.presentation.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -48,7 +50,13 @@ fun RepoSearchRoute(
     viewModel: RepoSearchViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    RepoSearchScreen(state = uiState, onEvent = viewModel::onEvent, modifier = modifier)
+    val context = LocalContext.current
+    RepoSearchScreen(
+        state = uiState,
+        onEvent = viewModel::onEvent,
+        onRepoClick = { repo -> context.openInCustomTab(repo.pageUrl) },
+        modifier = modifier,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,6 +64,7 @@ fun RepoSearchRoute(
 fun RepoSearchScreen(
     state: RepoSearchUiState,
     onEvent: (RepoSearchEvent) -> Unit,
+    onRepoClick: (RepoItemUiModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -76,6 +85,7 @@ fun RepoSearchScreen(
             RepoSearchContentView(
                 content = state.content,
                 onRetry = { onEvent(RepoSearchEvent.Retry) },
+                onRepoClick = onRepoClick,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -131,25 +141,33 @@ private fun SearchBar(
 private fun RepoSearchContentView(
     content: RepoSearchContent,
     onRetry: () -> Unit,
+    onRepoClick: (RepoItemUiModel) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     when (content) {
         RepoSearchContent.Idle -> CenteredBox(modifier) { Text(stringResource(R.string.repo_search_idle)) }
         RepoSearchContent.Loading -> CenteredBox(modifier) { CircularProgressIndicator() }
         RepoSearchContent.Empty -> CenteredBox(modifier) { Text(stringResource(R.string.repo_search_empty)) }
-        is RepoSearchContent.Loaded -> RepoList(repos = content.repos, modifier = modifier)
+        is RepoSearchContent.Loaded -> RepoList(repos = content.repos, onRepoClick = onRepoClick, modifier = modifier)
         is RepoSearchContent.Error -> ErrorView(error = content, onRetry = onRetry, modifier = modifier)
     }
 }
 
 @Composable
-private fun RepoList(repos: List<RepoItemUiModel>, modifier: Modifier = Modifier) {
+private fun RepoList(
+    repos: List<RepoItemUiModel>,
+    onRepoClick: (RepoItemUiModel) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     LazyColumn(modifier = modifier.fillMaxSize()) {
         items(items = repos, key = { it.id }) { repo ->
             Text(
                 text = repo.name,
                 style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onRepoClick(repo) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
             )
             HorizontalDivider()
         }
@@ -181,9 +199,9 @@ private class RepoSearchContentPreviewProvider : PreviewParameterProvider<RepoSe
     override val values = sequenceOf(
         RepoSearchContent.Loaded(
             listOf(
-                RepoItemUiModel(1, "architecture-samples"),
-                RepoItemUiModel(2, "nowinandroid"),
-                RepoItemUiModel(3, "compose-samples"),
+                RepoItemUiModel(1, "architecture-samples", "https://github.com/android/architecture-samples"),
+                RepoItemUiModel(2, "nowinandroid", "https://github.com/android/nowinandroid"),
+                RepoItemUiModel(3, "compose-samples", "https://github.com/android/compose-samples"),
             ),
         ),
         RepoSearchContent.Idle,
@@ -199,6 +217,10 @@ private fun RepoSearchScreenPreview(
     @PreviewParameter(RepoSearchContentPreviewProvider::class) content: RepoSearchContent,
 ) {
     GitHubRepoSearcherTheme {
-        RepoSearchScreen(state = RepoSearchUiState(queryInput = "Android", content = content), onEvent = {})
+        RepoSearchScreen(
+            state = RepoSearchUiState(queryInput = "Android", content = content),
+            onEvent = {},
+            onRepoClick = {},
+        )
     }
 }

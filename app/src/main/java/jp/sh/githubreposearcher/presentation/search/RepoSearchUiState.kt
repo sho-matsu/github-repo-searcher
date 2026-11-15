@@ -20,7 +20,7 @@ sealed interface RepoSearchContent {
     data class Error(@param:StringRes val messageResId: Int, val isRetryable: Boolean) : RepoSearchContent
 }
 
-data class RepoItemUiModel(val id: Long, val name: String)
+data class RepoItemUiModel(val id: Long, val name: String, val pageUrl: String)
 
 sealed interface RepoSearchEvent {
     data class QueryChanged(val input: String) : RepoSearchEvent

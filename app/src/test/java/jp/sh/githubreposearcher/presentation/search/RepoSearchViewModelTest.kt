@@ -7,6 +7,7 @@ import jp.sh.githubreposearcher.domain.GitHubRepo
 import jp.sh.githubreposearcher.domain.GitHubRepoSearchGateway
 import jp.sh.githubreposearcher.domain.RepoId
 import jp.sh.githubreposearcher.domain.RepoName
+import jp.sh.githubreposearcher.domain.RepoPageUrl
 import jp.sh.githubreposearcher.domain.RepoSearchResult
 import jp.sh.githubreposearcher.domain.SearchError
 import jp.sh.githubreposearcher.domain.SearchQuery
@@ -54,8 +55,8 @@ class RepoSearchViewModelTest {
     )
 
     private val repos = listOf(
-        GitHubRepo(RepoId(1), RepoName("nowinandroid")),
-        GitHubRepo(RepoId(2), RepoName("architecture-samples")),
+        GitHubRepo(RepoId(1), RepoName("nowinandroid"), RepoPageUrl("https://github.com/android/nowinandroid")),
+        GitHubRepo(RepoId(2), RepoName("architecture-samples"), RepoPageUrl("https://github.com/android/architecture-samples")),
     )
 
     @Test
@@ -69,11 +70,14 @@ class RepoSearchViewModelTest {
     }
 
     @Test
-    fun `検索に成功したときリポジトリ名の一覧を表示する`() = runTest {
+    fun `検索に成功したときリポジトリ名とページ URL の一覧を表示する`() = runTest {
         val viewModel = viewModel("Android", FakeGateway(RepoSearchResult.Success(repos)))
 
         val expected = RepoSearchContent.Loaded(
-            listOf(RepoItemUiModel(1, "nowinandroid"), RepoItemUiModel(2, "architecture-samples")),
+            listOf(
+                RepoItemUiModel(1, "nowinandroid", "https://github.com/android/nowinandroid"),
+                RepoItemUiModel(2, "architecture-samples", "https://github.com/android/architecture-samples"),
+            ),
         )
         assertEquals(expected, viewModel.uiState.value.content)
     }
