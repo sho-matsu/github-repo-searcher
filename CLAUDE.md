@@ -38,8 +38,8 @@ GitHub Search API(`GET /search/repositories`)でリポジトリを検索して�
 ./gradlew connectedAndroidTest          # インストルメンテッドテスト (app/src/androidTest)、端末が必要
 
 # 単一のテストクラス / メソッドを実行
-./gradlew :app:testDebugUnitTest --tests "jp.sh.githubreposearcher.domain.SearchQueryTest"
-./gradlew :app:testDebugUnitTest --tests "jp.sh.githubreposearcher.presentation.search.RepoSearchViewModelTest"
+./gradlew :app:testDebugUnitTest --tests "jp.sh.githubreposearcher.reposearch.domain.SearchQueryTest"
+./gradlew :app:testDebugUnitTest --tests "jp.sh.githubreposearcher.reposearch.presentation.RepoSearchViewModelTest"
 ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=jp.sh.githubreposearcher.ExampleInstrumentedTest
 ```
 
