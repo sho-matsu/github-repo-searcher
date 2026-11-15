@@ -19,7 +19,7 @@ GitHub Search API(`GET /search/repositories`)でリポジトリを検索して�
 1. `GitHubRepoSearcherApp`: `@HiltAndroidApp` を付けた Application クラス
 2. `MainActivity`: `RepoSearchFragment` に初期クエリ(`"Android"`)を渡して表示する
 3. `RepoSearchFragment` → `RepoSearchRoute` → `RepoSearchViewModel`: クエリを `SavedStateHandle` から受け取り、`SearchGitHubReposUseCase` 経由で検索する
-4. `RetrofitGitHubRepoSearchGateway`: `GitHubApi` を呼び、DTO をドメインモデルに変換する。共通ヘッダーは `GitHubHeadersInterceptor` が付与する
+4. `RetrofitGitHubRepoRepository`: `GitHubApi` を呼び、DTO をドメインモデルに変換する。共通ヘッダーは `GitHubHeadersInterceptor` が付与する
 
 ## コマンド
 
@@ -96,13 +96,13 @@ core/                  # 複数の機能で共有するもの(例: core/network�
 - 次に述べるレイヤー間の依存関係のルールは、機能パッケージの中でも `core/` の中でも同じように守る。
 
 - **依存関係のルール**: 依存は内側への一方向のみ — `presentation → application → domain ← infrastructure`。`domain` と `application` では `android.*`、`androidx.*`、Compose、Retrofit/Ktor、シリアライゼーション、DB のアノテーションを import しない。
-- **ポートとアダプター**: domain/application が必要とするインターフェース(検索 Gateway、Repository など)は `domain` に宣言し(Separated Interface)、`infrastructure` で実装する。
+- **ポートとアダプター**: domain/application が必要とするインターフェース(Repository など)は `domain` に宣言し(Separated Interface)、`infrastructure` で実装する。
 - **コンポジションルート**: 具体的な実装を知っているのは `di/`(と `MainActivity`/`Application`)だけ。すべてコンストラクタインジェクションで依存を受け取り、ビジネスロジックでサービスロケーターや static な参照は使わない。DI には Hilt を使う(後述の「依存性注入(Hilt)」を参照)。
 - インフラ層の型を境界の外に漏らさない。API の DTO や DB エンティティは `infrastructure` でドメインモデルに変換し、ViewModel はドメインモデルを UI モデルに変換する。
 
 ### DDD(戦術的設計)
 
-- **ユビキタス言語**: 型にはドメインの概念に沿った名前を付ける(repository、owner、star、language、query など)。名前の衝突に注意: *GitHub のリポジトリ*はドメインエンティティ `GitHubRepo` とし、型名の接尾辞 `Repository` は DDD/PoEAA の Repository パターン専用とする。読み取り専用のリモート検索ポートは Gateway として扱う(例: `GitHubRepoSearchGateway`)。
+- **ユビキタス言語**: 型にはドメインの概念に沿った名前を付ける(repository、owner、star、language、query など)。名前の衝突に注意: *GitHub のリポジトリ*はドメインエンティティ `GitHubRepo` とし、型名の接尾辞 `Repository` は DDD/PoEAA の Repository パターン専用とする(例: `GitHubRepoRepository`)。
 - **値オブジェクト**: ルールや意味を持つプリミティブはラップする(`RepoId`、`OwnerName`、`SearchQuery`、`StarCount`、`PageNumber`)。単一の値なら `@JvmInline value class`、複数の値をまとめるなら `data class` を使う。不変条件は `init { require(...) }` か、結果型を返すスマートコンストラクタで検証し、不正なインスタンスを作れないようにする。必ずイミュータブルにする。
 - **エンティティ**: 同一性は識別子(`id`)で判断し、等価性も id で比較する。実際のロジックがあるなら、"Manager"/"Helper" クラスではなくエンティティ自身に振る舞いを持たせる(ドメインモデル貧血症を避ける)。
 - **集約**: 状態の変更は集約ルートを通してのみ行う。Repository はテーブル単位ではなく集約ルート単位で作る。
@@ -120,8 +120,7 @@ core/                  # 複数の機能で共有するもの(例: core/network�
 ### エンタープライズアプリケーションパターン(PoEAA)
 
 - **Service Layer** → `application` のユースケース。トランザクションや整合性の境界を決め、presentation からビジネスロジックへの唯一の入り口となる。
-- **Repository** → 集約にコレクションのようにアクセスする仕組み。インターフェースは `domain`、実装は `infrastructure` に置く。
-- **Gateway** → 外部システム(GitHub REST API)をドメインに合わせた形のインターフェースで包む。
+- **Repository** → データアクセスはすべて Repository を通して行う。リモート API(GitHub REST API)・ローカル DB・キャッシュのどれが相手でも、読み取り専用でも同じとする。Repository は集約にコレクションのようにアクセスする仕組みで、インターフェースは `domain`、実装は `infrastructure` に置く。外部システムとの通信(Retrofit のサービスインターフェースなど)は Repository の実装の内部に隠し、ユースケースや ViewModel から直接呼ばない。
 - **Data Mapper** → `infrastructure` に明示的な変換関数を置く(`fun RepoDto.toDomain(): GitHubRepo`)。ドメインモデルにはシリアライゼーションや永続化のアノテーションを付けない。
 - **Data Transfer Object** → `@Serializable` な DTO は `infrastructure` の中だけに置き、通信フォーマットをそのまま表す。上位の層には公開しない。
 - **Special Case** → 「結果なし」「不明」は `null` やマジックナンバーではなく、sealed のサブタイプや明示的な空状態で表す。
@@ -135,7 +134,7 @@ core/                  # 複数の機能で共有するもの(例: core/network�
 | Factory Method / Static Factory | `companion object { fun of(...) }`、または結果型を返すスマートコンストラクタ。検証が必要なら `private constructor` で隠す |
 | Builder | 名前付き引数・デフォルト引数と `copy()` で代用し、手書きの Builder は作らない。DSL ビルダーは本当に入れ子の設定が必要な場合のみ |
 | Adapter | ドメインのポートを実装する infrastructure のクラス、および変換用の拡張関数 |
-| Decorator | ポートの実装を包んでキャッシュ・ログ・リトライを追加する(`class CachingSearchGateway(private val delegate: GitHubRepoSearchGateway) : GitHubRepoSearchGateway by delegate`) |
+| Decorator | ポートの実装を包んでキャッシュ・ログ・リトライを追加する(`class CachingGitHubRepoRepository(private val delegate: GitHubRepoRepository) : GitHubRepoRepository by delegate`) |
 | Facade | ユースケースが複数のポートをまとめたシンプルな API を提供する |
 | Observer | `Flow` / `StateFlow` / `SharedFlow` を使い、独自のリスナーリストは作らない |
 | State | `sealed interface` で UI やドメインの状態を表し、網羅的な `when` で分岐する |
@@ -148,7 +147,7 @@ core/                  # 複数の機能で共有するもの(例: core/network�
 - DI フレームワークは Hilt を使う(KSP で処理する。kapt は使わない)。
 - エントリポイント: `Application` クラスに `@HiltAndroidApp`、`MainActivity` に `@AndroidEntryPoint`、ViewModel に `@HiltViewModel` + `@Inject constructor` を付ける。ViewModel は `XxxRoute` コンポーザブルの中で `hiltViewModel()` を使って取得し、状態を持たない `XxxScreen` には ViewModel を渡さない。
 - `domain` / `application` で使ってよいのは、コンストラクタに付ける JSR-330 の `@Inject`(`javax.inject`)だけ。Hilt/Dagger 独自のアノテーション(`@Module`、`@InstallIn`、`@HiltViewModel`、`@AndroidEntryPoint` など)は、`di/`、`presentation/`、`Application`/`Activity` クラスでのみ使う。
-- module は、その機能専用のものは `<feature>/di/`、複数の機能で共有するものは `core/di/` などの `core/` 配下に置き、関心ごとに分ける(`NetworkModule`、`GatewayModule`、`DispatcherModule` など)。インターフェースと実装は `abstract` な module で `@Binds` を使って結び付ける。`@Provides` は自分でアノテーションを付けられない型(Retrofit/OkHttp/Ktor、`Json`、Room DB、Dispatcher)に限る。
+- module は、その機能専用のものは `<feature>/di/`、複数の機能で共有するものは `core/di/` などの `core/` 配下に置き、関心ごとに分ける(`NetworkModule`、`RepositoryModule`、`DispatcherModule` など)。インターフェースと実装は `abstract` な module で `@Binds` を使って結び付ける。`@Provides` は自分でアノテーションを付けられない型(Retrofit/OkHttp/Ktor、`Json`、Room DB、Dispatcher)に限る。
 - 適切な範囲で最も狭いコンポーネントに install する(`SingletonComponent`、`ViewModelComponent` など)。基本はスコープなしとし、`@Singleton` は共有が必要なものや生成コストが高いもの(HTTP クライアント、DB、メモリキャッシュ)にだけ付ける。
 - 同じ型を区別するときは修飾子を使う: `CoroutineDispatcher` には `@IoDispatcher` / `@DefaultDispatcher`、異なるベース URL には独自の `@Qualifier` アノテーションなど。
 - フィールドインジェクション(`@Inject lateinit var`)は Android のエントリポイント以外で使わない。ビジネスロジックから `EntryPointAccessors` を呼ばない。

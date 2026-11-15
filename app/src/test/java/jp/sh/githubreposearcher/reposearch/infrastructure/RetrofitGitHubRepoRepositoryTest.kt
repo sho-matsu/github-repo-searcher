@@ -19,14 +19,14 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 
-class RetrofitGitHubRepoSearchGatewayTest {
+class RetrofitGitHubRepoRepositoryTest {
 
     private val query = checkNotNull(SearchQuery.ofOrNull("Android"))
 
     private fun search(api: GitHubApi): RepoSearchResult {
         val dispatcher = StandardTestDispatcher()
         var result: RepoSearchResult? = null
-        runTest(dispatcher) { result = RetrofitGitHubRepoSearchGateway(api, dispatcher).search(query) }
+        runTest(dispatcher) { result = RetrofitGitHubRepoRepository(api, dispatcher).search(query) }
         return checkNotNull(result)
     }
 

@@ -3,7 +3,7 @@ package jp.sh.githubreposearcher.reposearch.infrastructure
 import java.io.IOException
 import javax.inject.Inject
 import jp.sh.githubreposearcher.core.di.IoDispatcher
-import jp.sh.githubreposearcher.reposearch.domain.GitHubRepoSearchGateway
+import jp.sh.githubreposearcher.reposearch.domain.GitHubRepoRepository
 import jp.sh.githubreposearcher.reposearch.domain.RepoSearchResult
 import jp.sh.githubreposearcher.reposearch.domain.SearchError
 import jp.sh.githubreposearcher.reposearch.domain.SearchQuery
@@ -12,10 +12,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerializationException
 import retrofit2.HttpException
 
-internal class RetrofitGitHubRepoSearchGateway @Inject constructor(
+internal class RetrofitGitHubRepoRepository @Inject constructor(
     private val api: GitHubApi,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-) : GitHubRepoSearchGateway {
+) : GitHubRepoRepository {
 
     override suspend fun search(query: SearchQuery): RepoSearchResult = withContext(ioDispatcher) {
         try {
