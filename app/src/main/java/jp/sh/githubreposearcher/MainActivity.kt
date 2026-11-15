@@ -5,7 +5,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.commit
 import dagger.hilt.android.AndroidEntryPoint
-import jp.sh.githubreposearcher.presentation.search.RepoSearchFragment
+import jp.sh.githubreposearcher.reposearch.presentation.RepoSearchFragment
 
 @AndroidEntryPoint
 class MainActivity : FragmentActivity(R.layout.activity_main) {
