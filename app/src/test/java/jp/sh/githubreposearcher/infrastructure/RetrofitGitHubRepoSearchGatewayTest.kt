@@ -1,9 +1,9 @@
 package jp.sh.githubreposearcher.infrastructure
 
 import java.io.IOException
-import jp.sh.githubreposearcher.domain.GitHubRepo
 import jp.sh.githubreposearcher.domain.RepoId
 import jp.sh.githubreposearcher.domain.RepoName
+import jp.sh.githubreposearcher.domain.RepoPageUrl
 import jp.sh.githubreposearcher.domain.RepoSearchResult
 import jp.sh.githubreposearcher.domain.SearchError
 import jp.sh.githubreposearcher.domain.SearchQuery
@@ -48,15 +48,17 @@ class RetrofitGitHubRepoSearchGatewayTest {
         var requestedQuery: String? = null
         val api = GitHubApi { q ->
             requestedQuery = q
-            SearchRepositoriesResponseDto(listOf(RepoDto(id = 1, name = "nowinandroid")))
+            SearchRepositoriesResponseDto(listOf(RepoDto(id = 1, name = "nowinandroid", htmlUrl = "https://github.com/android/nowinandroid")))
         }
 
         val result = search(api)
 
         assertEquals("Android", requestedQuery)
         val repos = (result as RepoSearchResult.Success).repos
-        assertEquals(listOf(GitHubRepo(RepoId(1), RepoName("nowinandroid"))), repos)
-        assertEquals("nowinandroid", repos.single().name.value)
+        val repo = repos.single()
+        assertEquals(RepoId(1), repo.id)
+        assertEquals(RepoName("nowinandroid"), repo.name)
+        assertEquals(RepoPageUrl("https://github.com/android/nowinandroid"), repo.pageUrl)
     }
 
     @Test

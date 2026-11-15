@@ -1,11 +1,15 @@
 <resources>
     <string name="app_name">GitHubRepoSearcher</string>
-    <string name="repo_search_title">リポジトリ検索結果</string>
-    <string name="repo_search_query_label">検索クエリ: %1$s</string>
+    <string name="repo_search_title">リポジトリ検索</string>
+    <string name="repo_search_query_placeholder">キーワードを入力</string>
+    <string name="repo_search_submit">検索</string>
+    <string name="repo_search_clear">クエリをクリア</string>
+    <string name="repo_search_idle">キーワードを入力してリポジトリを検索してください</string>
     <string name="repo_search_empty">該当するリポジトリはありません</string>
     <string name="repo_search_retry">再試行</string>
     <string name="repo_search_error_network">通信に失敗しました。接続を確認してください。</string>
     <string name="repo_search_error_rate_limited">API の利用制限に達しました。しばらくしてから再試行してください。</string>
     <string name="repo_search_error_invalid_query">検索クエリが不正です。</string>
     <string name="repo_search_error_unexpected">予期しないエラーが発生しました。</string>
+    <string name="repo_open_page_failed">ページを開けるアプリが見つかりません。</string>
 </resources>

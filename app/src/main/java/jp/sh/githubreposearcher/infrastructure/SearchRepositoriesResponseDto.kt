@@ -12,4 +12,5 @@ internal data class SearchRepositoriesResponseDto(
 internal data class RepoDto(
     @SerialName("id") val id: Long,
     @SerialName("name") val name: String,
+    @SerialName("html_url") val htmlUrl: String,
 )
