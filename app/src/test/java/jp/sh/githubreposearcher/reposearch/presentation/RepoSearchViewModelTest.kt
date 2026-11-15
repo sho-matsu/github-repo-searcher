@@ -49,8 +49,14 @@ class RepoSearchViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(query: String?, repository: GitHubRepoRepository) = RepoSearchViewModel(
-        savedStateHandle = SavedStateHandle(mapOf(RepoSearchViewModel.ARG_QUERY to query)),
+    private fun viewModel(query: String?, repository: GitHubRepoRepository) =
+        viewModel(SavedStateHandle(mapOf(RepoSearchViewModel.ARG_QUERY to query)), repository)
+
+    /**
+     * 同じ [savedStateHandle] で ViewModel を作り直すと、プロセスが再生成されて保存済みの状態から復元された場合と同じ状況になる。
+     */
+    private fun viewModel(savedStateHandle: SavedStateHandle, repository: GitHubRepoRepository) = RepoSearchViewModel(
+        savedStateHandle = savedStateHandle,
         searchGitHubRepos = SearchGitHubReposUseCase(repository),
     )
 
@@ -217,6 +223,47 @@ class RepoSearchViewModelTest {
         response.complete(RepoSearchResult.Success(repos))
 
         assertEquals(RepoSearchContent.Idle, viewModel.uiState.value.content)
+    }
+
+    @Test
+    fun `検索中に別のクエリで検索したとき、先の検索の結果で一覧を上書きしない`() = runTest {
+        val responses = mapOf("Android" to CompletableDeferred<RepoSearchResult>(), "Kotlin" to CompletableDeferred())
+        val viewModel = viewModel("Android", GitHubRepoRepository { query -> responses.getValue(query.value).await() })
+
+        viewModel.onEvent(RepoSearchEvent.QueryChanged("Kotlin"))
+        viewModel.onEvent(RepoSearchEvent.Search)
+        responses.getValue("Kotlin").complete(RepoSearchResult.Success(emptyList()))
+        responses.getValue("Android").complete(RepoSearchResult.Success(repos))
+
+        assertEquals(RepoSearchContent.Empty, viewModel.uiState.value.content)
+    }
+
+    @Test
+    fun `復元時は入力中の文字列を表示し、最後に検索したクエリで再検索する`() = runTest {
+        val savedStateHandle = SavedStateHandle(mapOf(RepoSearchViewModel.ARG_QUERY to "Android"))
+        val original = viewModel(savedStateHandle, FakeGitHubRepoRepository(RepoSearchResult.Success(repos), RepoSearchResult.Success(repos)))
+        original.onEvent(RepoSearchEvent.QueryChanged("Kotlin"))
+        original.onEvent(RepoSearchEvent.Search)
+        original.onEvent(RepoSearchEvent.QueryChanged("Kotlin coroutines"))
+        val repository = FakeGitHubRepoRepository(RepoSearchResult.Success(repos))
+
+        val restored = viewModel(savedStateHandle, repository)
+
+        assertEquals("Kotlin coroutines", restored.uiState.value.queryInput)
+        assertEquals(listOf("Kotlin"), repository.requestedQueries.map { it.value })
+    }
+
+    @Test
+    fun `クリアした状態から復元したとき、引数の初期クエリでは検索しない`() = runTest {
+        val savedStateHandle = SavedStateHandle(mapOf(RepoSearchViewModel.ARG_QUERY to "Android"))
+        viewModel(savedStateHandle, FakeGitHubRepoRepository(RepoSearchResult.Success(repos))).onEvent(RepoSearchEvent.ClearQuery)
+        val repository = FakeGitHubRepoRepository()
+
+        val restored = viewModel(savedStateHandle, repository)
+
+        assertEquals("", restored.uiState.value.queryInput)
+        assertTrue(repository.requestedQueries.isEmpty())
+        assertEquals(RepoSearchContent.Idle, restored.uiState.value.content)
     }
 
     @Test
