@@ -2,7 +2,7 @@ package jp.sh.githubreposearcher.reposearch.infrastructure
 
 import java.io.IOException
 import javax.inject.Inject
-import jp.sh.githubreposearcher.core.di.IoDispatcher
+import jp.sh.githubreposearcher.core.coroutines.IoDispatcher
 import jp.sh.githubreposearcher.reposearch.domain.GitHubRepoRepository
 import jp.sh.githubreposearcher.reposearch.domain.RepoSearchResult
 import jp.sh.githubreposearcher.reposearch.domain.SearchError

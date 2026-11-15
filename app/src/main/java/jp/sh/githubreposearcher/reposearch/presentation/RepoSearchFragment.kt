@@ -29,11 +29,8 @@ class RepoSearchFragment : Fragment() {
     }
 
     companion object {
-        /** Fragment の引数キー。ViewModel の SavedStateHandle からも同じキーで参照する。 */
-        internal const val ARG_QUERY = "query"
-
         fun newInstance(query: String): RepoSearchFragment = RepoSearchFragment().apply {
-            arguments = bundleOf(ARG_QUERY to query)
+            arguments = bundleOf(RepoSearchViewModel.ARG_QUERY to query)
         }
     }
 }
