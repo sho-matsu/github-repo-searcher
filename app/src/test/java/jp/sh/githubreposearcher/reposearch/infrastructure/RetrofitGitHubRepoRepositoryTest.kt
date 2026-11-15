@@ -95,4 +95,18 @@ class RetrofitGitHubRepoRepositoryTest {
         val result = repository(throwingApi(SerializationException("broken"))).search(query)
         assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), result)
     }
+
+    @Test
+    fun `ドメインモデルの制約を満たさない項目を含むとき Unexpected を返す`() = runTest {
+        val invalidRepos = listOf(
+            RepoDto(id = 0, name = "nowinandroid", htmlUrl = "https://github.com/android/nowinandroid"),
+            RepoDto(id = 1, name = " ", htmlUrl = "https://github.com/android/nowinandroid"),
+            RepoDto(id = 1, name = "nowinandroid", htmlUrl = "http://github.com/android/nowinandroid"),
+        )
+        invalidRepos.forEach { invalidRepo ->
+            val api = GitHubApi { SearchRepositoriesResponseDto(listOf(invalidRepo)) }
+
+            assertEquals(RepoSearchResult.Failure(SearchError.Unexpected), repository(api).search(query))
+        }
+    }
 }

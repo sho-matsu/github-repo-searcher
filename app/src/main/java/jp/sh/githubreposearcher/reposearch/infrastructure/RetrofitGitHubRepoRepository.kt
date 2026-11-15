@@ -19,8 +19,7 @@ internal class RetrofitGitHubRepoRepository @Inject constructor(
 
     override suspend fun search(query: SearchQuery): RepoSearchResult = withContext(ioDispatcher) {
         try {
-            val response = api.searchRepositories(query.value)
-            RepoSearchResult.Success(response.items.map { it.toDomain() })
+            api.searchRepositories(query.value).toResult()
         } catch (e: HttpException) {
             RepoSearchResult.Failure(e.toSearchError())
         } catch (_: IOException) {
@@ -28,6 +27,17 @@ internal class RetrofitGitHubRepoRepository @Inject constructor(
         } catch (_: SerializationException) {
             RepoSearchResult.Failure(SearchError.Unexpected)
         }
+    }
+
+    /**
+     * 値オブジェクトの制約を満たさない項目(id が 0 以下、https でない URL など)を含むレスポンスは、不正なレスポンスとして
+     * Unexpected にする。IllegalArgumentException を捕まえるのはドメインモデルへの変換部分だけに限定する。API 呼び出しまで
+     * 含めると、Retrofit の設定ミスなどのプログラミングエラーまで Unexpected として隠してしまうため。
+     */
+    private fun SearchRepositoriesResponseDto.toResult(): RepoSearchResult = try {
+        RepoSearchResult.Success(items.map { it.toDomain() })
+    } catch (_: IllegalArgumentException) {
+        RepoSearchResult.Failure(SearchError.Unexpected)
     }
 
     private fun HttpException.toSearchError(): SearchError = when {
